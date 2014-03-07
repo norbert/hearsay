@@ -1,24 +1,25 @@
-__all__ = ['DetectStream', 'Detect', 'DistToReference', 'Dist', 'ProbClass']
-
-
-import math
+__all__ = ['detect_stream',
+           'detect',
+           'dist_to_reference',
+           'dist',
+           'prob_class']
 
 
 import numpy as np
 
 
-def DetectStream(s_inf, N_obs, R_pos, R_neg, gamma=1, theta=1, D_req=1):
+def detect_stream(s_inf, N_obs, R_pos, R_neg, gamma=1, theta=1, D_req=1):
     """Algorithm 1.1
 
     Perform online binary classification on the infinite stream s_inf using
     sets of positive and negative reference signals R_pos and R_neg.
     """
 
-    ConsecutiveDetections = 0
+    consecutive_detections = 0
     s = []
     i = -1
 
-    def UpdateObservation(s_inf, N_obs):
+    def update_observation(s_inf, N_obs):
         try:
             s_i = s_inf.next()
             s.append(s_i)
@@ -30,35 +31,38 @@ def DetectStream(s_inf, N_obs, R_pos, R_neg, gamma=1, theta=1, D_req=1):
 
     while True:
         i += 1
-        s = UpdateObservation(s_inf, N_obs)
+        s = update_observation(s_inf, N_obs)
         if s is None:
             return
         elif len(s) < N_obs:
             continue
         s_ = np.array(s)
-        R = Detect(s_, R_pos, R_neg, gamma, theta)
-        if R:
-            ConsecutiveDetections += 1
-            if ConsecutiveDetections >= D_req:
+        result = detect(s_, R_pos, R_neg, gamma, theta)
+        if result:
+            consecutive_detections += 1
+            if consecutive_detections >= D_req:
                 return i
         else:
-            ConsecutiveDetections = 0
+            consecutive_detections = 0
 
 
-def Detect(s, R_pos, R_neg, gamma=1, theta=1):
+def detect(s, R_pos, R_neg, gamma=1, theta=1):
     """Algorithm 1.2
 
     Perform binary classification on the signal s using sets of positive and
     negative reference signals R_pos and R_neg.
     """
 
-    PosDists = DistToReference(s, R_pos)
-    NegDists = DistToReference(s, R_neg)
-    R = ProbClass(PosDists, gamma) / ProbClass(NegDists, gamma)
-    return R >= theta
+    pos_dists = dist_to_reference(s, R_pos)
+    neg_dists = dist_to_reference(s, R_neg)
+    ratio = prob_class(pos_dists, gamma) / prob_class(neg_dists, gamma)
+    if theta is not None:
+        return ratio > theta
+    else:
+        return ratio
 
 
-def DistToReference(s, R):
+def dist_to_reference(s, r):
     """Algorithm 2
 
     Compute the minimum distance between s and all pieces of r of the same
@@ -66,32 +70,32 @@ def DistToReference(s, R):
     """
 
     N_obs = s.shape[0]
-    N_ref = R.shape[1]
-    MinDists = None
+    N_ref = r.shape[1]
+    min_dists = None
     for i in range(N_ref - N_obs + 1):
-        D = Dist(R[:, i:(i + N_obs)], s)
-        if MinDists is not None:
-            MinDists = np.fmin(MinDists, D)
+        dists = dist(r[:, i:(i + N_obs)], s)
+        if min_dists is not None:
+            min_dists = np.fmin(min_dists, dists)
         else:
-            MinDists = D
-    return MinDists
+            min_dists = dists
+    return min_dists
 
 
-def Dist(s, t):
+def dist(s, t):
     """Algorithm 3
 
     Compute the distance between two signals s and t of the same length.
     """
-    D = np.sum((s - t) ** 2, 1)
-    return D
+
+    return np.sum((s - t) ** 2, 1)
 
 
-def ProbClass(Dists, gamma=1):
+def prob_class(Dists, gamma=1):
     """Algorithm 4
 
     Using the distances Dists of an observation to the reference signals of a
     certain class, compute a number proportional to the probability that the
     observation belongs to that class.
     """
-    P = np.sum(np.exp(Dists * -gamma))
-    return P
+
+    return np.sum(np.exp(Dists * -gamma))

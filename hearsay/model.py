@@ -9,7 +9,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin, TransformerMixin
 from sklearn.utils import array2d, column_or_1d, check_arrays
 
 
-from .algorithm import DetectStream
+from .algorithm import detect_stream
 
 
 class StreamClassifier(BaseEstimator, ClassifierMixin):
@@ -58,9 +58,9 @@ class StreamClassifier(BaseEstimator, ClassifierMixin):
 
         i_pred = []
         for X_i in X:
-            detection = DetectStream(iter(X_i), N_obs,
-                                     self.R_pos_, self.R_neg_,
-                                     self.gamma, self.theta, self.D_req)
+            detection = detect_stream(iter(X_i), N_obs,
+                                      self.R_pos_, self.R_neg_,
+                                      self.gamma, self.theta, self.D_req)
             i_pred.append(detection)
         return i_pred
 
