@@ -6,6 +6,7 @@ __all__ = ['detect_stream',
 
 
 import numpy as np
+from sklearn.metrics.pairwise import euclidean_distances
 
 
 def detect_stream(s_inf, N_obs, R_pos, R_neg, gamma=1, theta=1, D_req=1):
@@ -87,7 +88,7 @@ def dist(s, t):
     Compute the distance between two signals s and t of the same length.
     """
 
-    return np.sum((s - t) ** 2, 1)
+    return euclidean_distances(s, t, squared=True)[:, 0]
 
 
 def prob_class(Dists, gamma=1):
