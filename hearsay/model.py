@@ -1,15 +1,22 @@
 __all__ = ['StreamClassifier',
-           'BaselineSpikeNormalizer',
+           'StreamNormalizer',
+           'BaselineNormalizer',
+           'SpikeNormalizer',
            'SmoothingNormalizer',
            'LogNormalizer']
 
 
+from collections import OrderedDict
+
+
 import numpy as np
-from sklearn.base import BaseEstimator, ClassifierMixin, TransformerMixin
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.base import TransformerMixin as _TransformerMixin
 from sklearn.utils import array2d, column_or_1d, check_arrays
 
 
 from .algorithm import detect_stream
+from .normalization import *
 
 
 class StreamClassifier(BaseEstimator, ClassifierMixin):
@@ -23,8 +30,7 @@ class StreamClassifier(BaseEstimator, ClassifierMixin):
 
     def fit(self, X, y):
         X, y = check_arrays(X, y, sparse_format='dense')
-        y = column_or_1d(y)
-        y = np.asarray(y, dtype='int8')
+        y = np.asarray(column_or_1d(y), dtype='int8')
 
         n_samples, n_features = X.shape
         if self.N_ref is None:
@@ -65,67 +71,78 @@ class StreamClassifier(BaseEstimator, ClassifierMixin):
         return i_pred
 
 
-class BaselineSpikeNormalizer(BaseEstimator, TransformerMixin):
+class TransformerMixin(_TransformerMixin):
 
-    def __init__(self, beta=1, alpha=1, epsilon=0.01):
+    def fit(self, X, y=None, **kwargs):
+        return self
+
+
+class StreamNormalizer(BaseEstimator, TransformerMixin):
+
+    def __init__(self, beta=1, alpha=1.2, N_smooth=1, log=True,
+                 mode='online', epsilon=0.01):
         self.beta = beta
         self.alpha = alpha
+        self.N_smooth = N_smooth
+        self.log = log
         self.epsilon = epsilon
 
-    def fit_transform(self, X, y=None):
-        return self.transform(X)
+        transformers = OrderedDict()
+        if beta is not None:
+            transformers['baseline'] = \
+                BaselineNormalizer(beta, mode=mode, epsilon=epsilon)
+        if alpha is not None:
+            transformers['spike'] = SpikeNormalizer(alpha)
+        if N_smooth is not None and N_smooth > 1:
+            transformers['smoothing'] = SmoothingNormalizer(N_smooth)
+        if log:
+            transformers['log'] = LogNormalizer(epsilon=epsilon)
+        self._transformers = transformers
 
     def transform(self, X, y=None):
         X = array2d(X)
-        e = self.epsilon
+        for transformer in self._transformers.values():
+            X = transformer.transform(X)
+        return X
 
-        def normalize_baseline(signal, beta):
-            norm = np.sum(signal, 1)[:, None]
-            values = ((signal + e) / (norm + e)) ** beta
-            return values
 
-        def normalize_spikes(signal, alpha):
-            values = np.abs(signal[:, 1:] - signal[:, 0:-1]) ** alpha
-            return values
+class BaselineNormalizer(BaseEstimator, TransformerMixin):
 
-        values = X
-        if not self.beta is None:
-            values = normalize_baseline(values, self.beta)
-        if not self.alpha is None:
-            values = normalize_spikes(values, self.alpha)
+    def __init__(self, beta=1, mode='online', epsilon=0.01):
+        self.beta = beta
+        self.mode = mode
+        self.epsilon = epsilon
 
-        return values
+    def transform(self, X, y=None):
+        X = array2d(X)
+        return normalize_baseline(X, self.beta,
+                                  mode=self.mode, epsilon=self.epsilon)
+
+
+class SpikeNormalizer(BaseEstimator, TransformerMixin):
+
+    def __init__(self, alpha=1.2):
+        self.alpha = alpha
+
+    def transform(self, X, y=None):
+        X = array2d(X)
+        return normalize_spikes(X, self.alpha)
 
 
 class SmoothingNormalizer(BaseEstimator, TransformerMixin):
 
-    def __init__(self, n=1, epsilon=0.01):
-        self.n = n
-        self.epsilon = epsilon
+    def __init__(self, N=1):
+        self.N = N
 
-    def fit_transform(self, X, y=None):
-        return self.transform(X)
-
-    def transform(self, X):
-        e = self.epsilon
+    def transform(self, X, y=None):
         X = array2d(X)
-
-        # http://stackoverflow.com/a/14314054
-        def moving_average(X, n):
-            ret = np.cumsum(X, 1) + e
-            ret[:, n:] = ret[:, n:] - ret[:, :-n]
-            return ret[:, (n - 1):] / n
-
-        return moving_average(X, self.n)
+        return moving_average(X, self.N)
 
 
 class LogNormalizer(BaseEstimator, TransformerMixin):
 
     def __init__(self, epsilon=0.01):
         self.epsilon = epsilon
-
-    def fit_transform(self, X, y=None):
-        return self.transform(X)
 
     def transform(self, X, y=None):
         e = self.epsilon
