@@ -16,29 +16,15 @@ def detect_stream(s_inf, N_obs, R_pos, R_neg, gamma=1, theta=1, D_req=1):
     """
 
     consecutive_detections = 0
-    s = []
     i = -1
-
-    def update_observation(s_inf, N_obs):
-        try:
-            s_i = s_inf.next()
-            s.append(s_i)
-        except StopIteration as e:
-            return
-        if len(s) > N_obs:
-            del s[:-N_obs]
-        return s
-
     while True:
         i += 1
-        s = update_observation(s_inf, N_obs)
-        if s is None:
-            return
-        elif len(s) < N_obs:
+        if i < (N_obs - 1):
             continue
-        s_ = np.array(s)
-        result = detect(s_, R_pos, R_neg, gamma, theta)
-        if result:
+        elif i >= len(s_inf):
+            return
+        s = s_inf[(i - N_obs + 1):(i + 1)]
+        if detect(s, R_pos, R_neg, gamma, theta):
             consecutive_detections += 1
             if consecutive_detections >= D_req:
                 return i

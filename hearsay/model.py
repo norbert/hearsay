@@ -64,7 +64,7 @@ class StreamClassifier(BaseEstimator, ClassifierMixin):
 
         i_pred = []
         for X_i in X:
-            detection = detect_stream(iter(X_i), N_obs,
+            detection = detect_stream(X_i, N_obs,
                                       self.R_pos_, self.R_neg_,
                                       self.gamma, self.theta, self.D_req)
             i_pred.append(detection)
