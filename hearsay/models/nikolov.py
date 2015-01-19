@@ -1,5 +1,5 @@
-__all__ = ['StreamClassifier',
-           'StreamNormalizer',
+__all__ = ['TrendClassifier',
+           'TrendNormalizer',
            'BaselineNormalizer',
            'SpikeNormalizer',
            'SmoothingNormalizer',
@@ -19,7 +19,7 @@ from ..algorithms.nikolov import detect_stream
 from ..normalizations import *
 
 
-class StreamClassifier(BaseEstimator, ClassifierMixin):
+class TrendClassifier(BaseEstimator, ClassifierMixin):
 
     def __init__(self, gamma=1, theta=1, D_req=1, N_obs=None, N_ref=None):
         self.gamma = gamma
@@ -77,7 +77,7 @@ class TransformerMixin(_TransformerMixin):
         return self
 
 
-class StreamNormalizer(BaseEstimator, TransformerMixin):
+class TrendNormalizer(BaseEstimator, TransformerMixin):
 
     def __init__(self, beta=1, alpha=1.2, N_smooth=1, log=True,
                  mode='online', epsilon=0.01):

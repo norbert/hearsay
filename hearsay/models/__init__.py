@@ -1,1 +1,1 @@
-from .nikolov import StreamClassifier, StreamNormalizer
+from .nikolov import TrendClassifier, TrendNormalizer

@@ -22,7 +22,7 @@ def normalize_baseline(signals, beta=1, epsilon=0.01,
 def _normalize_baseline_online(signals, beta, epsilon, function):
     e = epsilon
     norm_signals = [[((signal[i] + e) / (function(signal[0:(i + 1)], 0) + e))
-                    ** beta for i in range(len(signal))] for signal in signals]
+                     ** beta for i in range(len(signal))] for signal in signals]
     return np.array(norm_signals)
 
 
