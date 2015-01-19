@@ -15,8 +15,8 @@ from sklearn.base import TransformerMixin as _TransformerMixin
 from sklearn.utils import array2d, column_or_1d, check_arrays
 
 
-from .algorithm import detect_stream
-from .normalization import *
+from ..algorithms.nikolov import detect_stream
+from ..normalizations import *
 
 
 class StreamClassifier(BaseEstimator, ClassifierMixin):
